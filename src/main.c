@@ -177,6 +177,13 @@ static void TaskTransmitSerialDebug(void *pvParameters){
 //    }
 //}
 
+static void PIDTask(void *pvParameters){
+    TickType_t xLastWakeTime;
+    xLastWakeTime = xTaskGetTickCount();
+    const TickType_t frequency = pdMS_TO_TICKS(100);
+    vTaskDelayUntil(&xLastWakeTime, frequency);
+}
+
 static void MotorTask(void *pvParameters){
     
     TickType_t xLastWakeTime;
