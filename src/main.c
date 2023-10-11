@@ -38,6 +38,9 @@
 /* 3D printer control */
 #include "motorController.h"
 
+/*PID controller*/
+#include "PID_controller.h"
+
 /*-----------------------------------------------------------*/
 /* Create a handle for the serial port. */
 extern xComPortHandle xSerialPort;
@@ -182,6 +185,16 @@ static void PIDTask(void *pvParameters){
     xLastWakeTime = xTaskGetTickCount();
     const TickType_t frequency = pdMS_TO_TICKS(100);
     vTaskDelayUntil(&xLastWakeTime, frequency);
+
+    PID_controller_step();
+    //TODO: read analog temp, convert and plug into PID
+    //read output, convert it to PWM signal and send it to heater
+
+    PID_controller_Y.Out1; //PID output = applied power
+    PID_controller_U.In1; //PID input = target temperature
+    PID_controller_U.In2; //PID input = measured temperature
+
+    
 }
 
 static void MotorTask(void *pvParameters){
