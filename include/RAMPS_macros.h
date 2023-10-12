@@ -65,14 +65,14 @@ extern "C" {
 // Thermistor ports and pins
     
 #define THERM_PORT PORTK
-#define THERM0_PIN 5
+#define THERM0_PIN A13
 // #define THERM1_PIN 6 // uncomment for secondary thermistor
 // #define THERM2_PIN 7 // uncomment for tertiary thermistor
     
 // Heater and fan ports and pins
     
 #define HOT_END_PORT PORTH
-#define HOT_END_PIN 5
+#define HOT_END_PIN 8
 //#define HOT_BED_PORT PORTH
 //#define HOT_BED_PIN 4
 //#define FANS_PORT PORTB

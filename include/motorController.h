@@ -54,7 +54,7 @@ typedef struct {
 
 /* motor state enum */
 typedef enum {
-    init,
+    initMotor,
     homing,
     ready,
     busy

@@ -17,10 +17,10 @@ extern xComPortHandle xSerialPort;
 #define speed_to_ocval(mm_p_s, mm_p_ms) min((uint16_t)(62500/((mm_p_s)/(mm_p_ms))), 65535)
 
 /* 3 motors */
-volatile motor_t x_motor = {init, x, 0, 0, 0, X_MM_PER_MICROSTEP};
-volatile motor_t y_motor = {init, y, 0, 0, 0, Y_MM_PER_MICROSTEP};
-volatile motor_t z_motor = {init, z, 0, 0, 0, Z_MM_PER_MICROSTEP};
-volatile motor_t e_motor = {init, e, 0, 0, 0, E_MM_PER_MICROSTEP};
+volatile motor_t x_motor = {initMotor, x, 0, 0, 0, X_MM_PER_MICROSTEP};
+volatile motor_t y_motor = {initMotor, y, 0, 0, 0, Y_MM_PER_MICROSTEP};
+volatile motor_t z_motor = {initMotor, z, 0, 0, 0, Z_MM_PER_MICROSTEP};
+volatile motor_t e_motor = {initMotor, e, 0, 0, 0, E_MM_PER_MICROSTEP};
 
 /* head position */
 head_position_t head_position = {-1, -1, -1}; // -1 = not homed yet,

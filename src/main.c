@@ -41,6 +41,12 @@
 /*PID controller*/
 #include "PID_controller.h"
 
+/*Arduino main library*/
+#include "Arduino.h"
+
+/*temperature table*/
+#include "thermistortable_1.h"
+
 /*-----------------------------------------------------------*/
 /* Create a handle for the serial port. */
 extern xComPortHandle xSerialPort;
@@ -52,8 +58,13 @@ static void TaskBlinkRedLED(void *pvParameters); // Main Arduino Mega 2560, Free
 static void TaskTransmitSerialDebug(void *pvParameters); // example task that periodically transmits something
 //static void ButtonTask(void *pvParameters);
 static void MotorTask(void *pvParameters);
+static void PIDTask(void *pvParameters);
+int checkTable(int thermisttor);
 
 /*-----------------------------------------------------------*/
+/*global variables*/
+int global_temp;
+double global_power;
 
 /* Main program loop */
 int main(void) __attribute__((OS_main));
@@ -68,19 +79,27 @@ int main(void)
 	avrSerialxPrint_P( &xSerialPort, PSTR("\r\n\n\nHello World!\r\n")); // Ok, so we're alive...
 
     // create all the tasks
-    xTaskCreate(
-            TaskBlinkRedLED
-            ,  (const char *)"RedLED" // Main Arduino Mega 2560, Freetronics EtherMega (Red) LED Blink
-            ,  256				// Tested 9 free @ 208
-            ,  NULL
-            ,  2 // priority of 1, the idle task has priority of 0
-            ,  NULL ); // */
+    // xTaskCreate(
+    //         TaskBlinkRedLED
+    //         ,  (const char *)"RedLED" // Main Arduino Mega 2560, Freetronics EtherMega (Red) LED Blink
+    //         ,  256				// Tested 9 free @ 208
+    //         ,  NULL
+    //         ,  2 // priority of 1, the idle task has priority of 0
+    //         ,  NULL ); // */
     xTaskCreate(
             TaskTransmitSerialDebug
             , (const char*)"Debug"
             , 128
             , NULL
             , 1
+            , NULL
+            );
+    xTaskCreate(
+            PIDTask
+            , (const char *)"PID"
+            , 256
+            , NULL
+            , 2
             , NULL
             );
 //    xTaskCreate(
@@ -91,14 +110,14 @@ int main(void)
 //            , configMAX_PRIORITIES // give this task the max priority
 //            , NULL
 //            );
-    xTaskCreate(
-            MotorTask
-            , (const char*)"mot"
-            , 256
-            , NULL
-            , 2
-            , NULL
-            );
+    // xTaskCreate(
+    //         MotorTask
+    //         , (const char*)"mot"
+    //         , 256
+    //         , NULL
+    //         , 2
+    //         , NULL
+    //         );
     
     // Some debug info, e.g. how much heap is still free?
 	avrSerialPrintf_P(PSTR("\r\n\nFree Heap Size: %u\r\n"),xPortGetFreeHeapSize() ); // needs heap_1 or heap_2 for this function to succeed.
@@ -150,6 +169,8 @@ static void TaskTransmitSerialDebug(void *pvParameters){
         // using local SRAM instead of program memory for the array (not really recommended)
         const char local_data[] = "Activation nr.: %u\r\n";
         xSerialPrintf(local_data, activationCount);
+        xSerialPrintf("measured temperature = %d \n", global_temp);
+        xSerialPrintf("output power = %f \n", global_temp);
         vTaskDelay(xDelay1000ms); // what's the difference with vTaskDelayUntil?
         ++activationCount;
     } 
@@ -184,20 +205,24 @@ static void PIDTask(void *pvParameters){
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     const TickType_t frequency = pdMS_TO_TICKS(100);
-    vTaskDelayUntil(&xLastWakeTime, frequency);
-    //analogRead?
-    int measuredTemp = analogRead(THERM0_PIN);
-    int measuredTemp = analogRead((THERM_PORT & (1 << THERM0_PIN)));
-
-    PID_controller_step();
-    //TODO: read analog temp, convert and plug into PID
-    //read output, convert it to PWM signal and send it to heater
-
-    PID_controller_Y.Out1; //PID output = applied power
-    PID_controller_U.In1; //PID input = target temperature
-    PID_controller_U.In2; //PID input = measured temperature
-
-    
+    PID_controller_U.In1 = 200; //PID input = target temperature 
+    for (;;)
+    {
+        int measuredTemp = analogRead(THERM0_PIN);
+        int measuredTempInC = checkTable(measuredTemp);
+        PID_controller_U.In2 = measuredTempInC; //PID input = measured temperature
+        PID_controller_step();
+        double power = PID_controller_Y.Out1;
+        int analogPower = (power/40)*255;
+        if (analogPower > 255)
+        {
+            analogPower = 255;
+        }
+        analogWrite(HOT_END_PIN, analogPower);    
+        global_power = power;
+        global_temp = measuredTemp;    
+        vTaskDelayUntil(&xLastWakeTime, frequency);
+    }  
 }
 
 static void MotorTask(void *pvParameters){
@@ -244,5 +269,25 @@ static void MotorTask(void *pvParameters){
         xSerialPrintf("remsteps %u\r\n", x_motor.remaining_steps);
     }
 }
-
+int checkTable(int thermistor){
+    int x1,x2,y1,y2;
+    int result;
+    for (int i = 0; i < sizeof(temptable_1)/sizeof(temptable_1[0]); i++)
+    {
+        if (thermistor == temptable_1[i][0])
+        {
+            result = temptable_1[i][1];
+        }
+        else{
+            x1 = temptable_1[i][0];
+            y1 = temptable_1[i][1];
+            x2 = temptable_1[i + 1][0];
+            y2 = temptable_1[i + 1][1];
+            if (thermistor >= x1 && thermistor <= x2) {
+                result = y1 + ((thermistor - x1) * (y2 - y1)) / (x2 - x1);
+            }
+        }
+    }
+    return result;
+}
 
