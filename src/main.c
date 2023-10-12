@@ -185,6 +185,9 @@ static void PIDTask(void *pvParameters){
     xLastWakeTime = xTaskGetTickCount();
     const TickType_t frequency = pdMS_TO_TICKS(100);
     vTaskDelayUntil(&xLastWakeTime, frequency);
+    //analogRead?
+    int measuredTemp = analogRead(THERM0_PIN);
+    int measuredTemp = analogRead((THERM_PORT & (1 << THERM0_PIN)));
 
     PID_controller_step();
     //TODO: read analog temp, convert and plug into PID
