@@ -64,14 +64,15 @@ int checkTable(int thermisttor);
 /*-----------------------------------------------------------*/
 /*global variables*/
 int global_temp;
-double global_power;
+int global_power;
+int measured_temp_C;
 
 /* Main program loop */
 int main(void) __attribute__((OS_main));
 
 int main(void)
 {
-
+    init();
     // turn on the serial port for debugging or for other USART reasons.
 	//xSerialPort = xSerialPortInitMinimal( USART0, 38400, portSERIAL_BUFFER_TX, portSERIAL_BUFFER_RX); //  serial port: WantedBaud, TxQueueLength, RxQueueLength (8n1)
     xSerialPort = xSerialPortInitMinimal( USART0, 115200, portSERIAL_BUFFER_TX, portSERIAL_BUFFER_RX); //  serial port: WantedBaud, TxQueueLength, RxQueueLength (8n1)
@@ -110,14 +111,14 @@ int main(void)
 //            , configMAX_PRIORITIES // give this task the max priority
 //            , NULL
 //            );
-    // xTaskCreate(
-    //         MotorTask
-    //         , (const char*)"mot"
-    //         , 256
-    //         , NULL
-    //         , 2
-    //         , NULL
-    //         );
+    xTaskCreate(
+            MotorTask
+            , (const char*)"mot"
+            , 256
+            , NULL
+            , 2
+            , NULL
+            );
     
     // Some debug info, e.g. how much heap is still free?
 	avrSerialPrintf_P(PSTR("\r\n\nFree Heap Size: %u\r\n"),xPortGetFreeHeapSize() ); // needs heap_1 or heap_2 for this function to succeed.
@@ -168,9 +169,11 @@ static void TaskTransmitSerialDebug(void *pvParameters){
     {   
         // using local SRAM instead of program memory for the array (not really recommended)
         const char local_data[] = "Activation nr.: %u\r\n";
+        const char measured_temp[] = "measured temperature = %d \n";
         xSerialPrintf(local_data, activationCount);
-        xSerialPrintf("measured temperature = %d \n", global_temp);
-        xSerialPrintf("output power = %f \n", global_temp);
+        xSerialPrintf(measured_temp, global_temp);
+        xSerialPrintf("temp in C: %d \n", measured_temp_C);
+        xSerialPrintf("output power = %d \n", global_power);
         vTaskDelay(xDelay1000ms); // what's the difference with vTaskDelayUntil?
         ++activationCount;
     } 
@@ -202,10 +205,14 @@ static void TaskTransmitSerialDebug(void *pvParameters){
 //}
 
 static void PIDTask(void *pvParameters){
+    digitalWrite(9, HIGH);
     TickType_t xLastWakeTime;
     xLastWakeTime = xTaskGetTickCount();
     const TickType_t frequency = pdMS_TO_TICKS(100);
     PID_controller_U.In1 = 200; //PID input = target temperature 
+    //setup ADC pins
+    //ADMUX |= (1<<REFS0);
+    //ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADEN);
     for (;;)
     {
         int measuredTemp = analogRead(THERM0_PIN);
@@ -218,9 +225,10 @@ static void PIDTask(void *pvParameters){
         {
             analogPower = 255;
         }
-        analogWrite(HOT_END_PIN, analogPower);    
-        global_power = power;
+        analogWrite(10, analogPower); 
         global_temp = measuredTemp;    
+        global_power = analogPower;   
+        measured_temp_C = measuredTempInC;
         vTaskDelayUntil(&xLastWakeTime, frequency);
     }  
 }
@@ -265,13 +273,14 @@ static void MotorTask(void *pvParameters){
             moveMotor_mm(&z_motor, 0.4, 5, 1);
             while(z_motor.motor_state != ready){vTaskDelay(pdMS_TO_TICKS(100));}
         }
+        extrude_mm_filament(20, 5);
         
         xSerialPrintf("remsteps %u\r\n", x_motor.remaining_steps);
     }
 }
 int checkTable(int thermistor){
     int x1,x2,y1,y2;
-    int result;
+    int result = 300;
     for (int i = 0; i < sizeof(temptable_1)/sizeof(temptable_1[0]); i++)
     {
         if (thermistor == temptable_1[i][0])
@@ -290,4 +299,5 @@ int checkTable(int thermistor){
     }
     return result;
 }
+
 

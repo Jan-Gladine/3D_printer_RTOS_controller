@@ -308,6 +308,8 @@ void moveMotor_microsteps(volatile motor_t* motor, uint16_t output_compare_val, 
 
 /* Function to extrude X mm of filament*/
 void extrude_mm_filament(float mm, uint16_t output_compare_val){
+    int microsteps = mm_to_microsteps(mm, E_MM_PER_MICROSTEP);
+    moveMotor_microsteps(&e_motor, output_compare_val, microsteps, z);
     return;
 }
 

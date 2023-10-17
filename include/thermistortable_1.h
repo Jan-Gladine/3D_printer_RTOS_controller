@@ -20,11 +20,10 @@
  *
  */
 
-#define OVERSAMPLENR 0
-#include <avr/pgmspace.h>
+#define OVERSAMPLENR 1
 
 // 100k bed thermistor
-const short temptable_1[][2] PROGMEM = {
+const short temptable_1[][2] = {
   {   23 * OVERSAMPLENR, 300 },
   {   25 * OVERSAMPLENR, 295 },
   {   27 * OVERSAMPLENR, 290 },
